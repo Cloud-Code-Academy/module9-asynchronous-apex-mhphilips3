@@ -27,9 +27,34 @@ public with sharing class NextStepFuture {
      * Opportunity Next Step field is a standard field
      * Update the corresponding test class AsynchronousTest and test method nextStepFuture_testUpdateAllNextStep to cover test this method
      */
-    //[public | private ] [static] data_type method_name (input parameters) {
-    //  The body of the method
-    //}
+    @future
+    public static void updateAllNextStep () {
+        
+        List<Account> accList = new List<Account>([SELECT Id, Next_Step__c, 
+                                            (SELECT Id, NextStep FROM Opportunities)
+                                            FROM Account]);
+        List<Opportunity> oppList = new List<Opportunity>();
+
+        //Iterate through records, setting Next Step field for accs and opps
+        for(Account acc : accList){
+            if(acc.Next_Step__c != 'Meeting in the future'){
+                acc.Next_Step__c = 'Meeting in the future';
+            }
+            for(Opportunity opp : acc.Opportunities){
+                if(opp.NextStep != 'Meeting in the future'){
+                    opp.NextStep = 'Meeting in the future';
+                    oppList.add(opp);
+                }
+            }
+        }
+        //update Accounts and Opportunities
+        if(!accList.isEmpty()){
+            update accList;
+        }
+        if(!oppList.isEmpty()){
+            update oppList;
+        }    
+    }
 
     /*
     * Question 2
@@ -41,11 +66,9 @@ public with sharing class NextStepFuture {
     public static void createDealAndUpdateRole() {
         Opportunity bigDeal = new Opportunity();
         insertBigDeal(bigDeal);
-
-        UserRole[] roles = [SELECT Id, Name FROM UserRole WHERE Id = :UserInfo.getUserRoleId() OR Name = 'CRO' LIMIT 1];
-        updateUserRoleName(roles);
+        updateUserRoleName();
     }
-
+    
     // Helper method to insert big deal
     private static void insertBigDeal(Opportunity opp) {
         opp.Amount = 1000000;
@@ -55,10 +78,15 @@ public with sharing class NextStepFuture {
         
         insert opp;
     }
-
-
-    // Helper method to update role name
-    private static void updateUserRoleName(UserRole[] roles){
+    // Future method to update role name in new transaction
+    @future
+    private static void updateUserRoleName(){
+        UserRole[] roles = [SELECT Id, Name FROM UserRole WHERE Id = :UserInfo.getUserRoleId() OR Name = 'CRO' LIMIT 1];
+        updateUserRoleNameHelper(roles);
+    }
+    
+    // Helper method to complete role name update
+    private static void updateUserRoleNameHelper(UserRole[] roles){
         UserRole role;
         if (roles.isEmpty()) {
             role = new UserRole();
